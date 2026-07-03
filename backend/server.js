@@ -55,7 +55,7 @@ app.post(
 
       res.json({
         similarity: similarityPercent + "%",
-        matched: diffValue < 0.20, // <20% difference means match
+        matched: diffValue < 0.25, // <25% difference means match (75% similarity)
       });
     } catch (err) {
       console.error("COMPARE ERROR:", err);
@@ -65,10 +65,14 @@ app.post(
 );
 
 // ----------- Connect MongoDB -----------
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("MongoDB Error:", err));
+if (process.env.MONGO_URI) {
+  mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => console.log("MongoDB Connected"))
+    .catch((err) => console.log("MongoDB Error:", err));
+} else {
+  console.log("No MONGO_URI environment variable set. Database connection skipped.");
+}
 
 // ----------- Start Server -----------
 const PORT = process.env.PORT || 5000;
