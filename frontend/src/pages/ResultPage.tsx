@@ -55,7 +55,7 @@ function ResultPage() {
     );
   }
 
-  const { similarity, matched, userPreview, cctvPreview, itemName } = state;
+  const { similarity, matched, userPreview, cctvPreview, itemName, aiEngine, boxes } = state;
 
   return (
     <div className="max-w-3xl mx-auto bg-slate-900/40 border border-slate-800 p-8 rounded-3xl backdrop-blur-xl shadow-2xl mt-4">
@@ -100,10 +100,33 @@ function ResultPage() {
 
         <div className="text-center space-y-3">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">CCTV Snapshot Image</h3>
-          <div className="aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+          <div className="aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-800 relative">
             <img src={cctvPreview} alt="CCTV camera snapshot" className="w-full h-full object-cover" />
+            
+            {/* YOLO Bounding Box Overlay */}
+            {boxes && boxes.map((boxObj: any, index: number) => {
+              const [x1, y1, x2, y2] = boxObj.box;
+              const left = (x1 / 6.4).toFixed(1) + "%";
+              const top = (y1 / 6.4).toFixed(1) + "%";
+              const width = ((x2 - x1) / 6.4).toFixed(1) + "%";
+              const height = ((y2 - y1) / 6.4).toFixed(1) + "%";
+              
+              return (
+                <div 
+                  key={index} 
+                  style={{ left, top, width, height }} 
+                  className="absolute border-2 border-indigo-500 bg-indigo-500/10 flex flex-col justify-start items-start pointer-events-none"
+                >
+                  <span className="bg-indigo-600 text-white font-bold text-[8px] px-1 py-0.2 rounded-br leading-none uppercase">
+                    {boxObj.label} ({(boxObj.confidence * 100).toFixed(0)}%)
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          <span className="inline-block text-xs font-semibold text-slate-300">CCTV Camera Reference Frame</span>
+          <span className="inline-block text-xs font-semibold text-slate-300">
+            CCTV Frame (AI Engine: {aiEngine || 'simulator'})
+          </span>
         </div>
       </div>
 

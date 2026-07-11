@@ -144,11 +144,15 @@ app.post(
         }
       }
 
+      const aiData = await getAIBoundingBoxes(cctvImage);
+
       res.json({
         similarity: similarityPercent,
         matched,
         category: category || "Unknown",
-        confidence: parseFloat(similarityPercent) > 85 ? "High" : "Medium"
+        confidence: parseFloat(similarityPercent) > 85 ? "High" : "Medium",
+        aiEngine: aiData.engine,
+        boxes: aiData.boxes
       });
     } catch (err) {
       console.error("COMPARE ERROR:", err);
@@ -156,6 +160,40 @@ app.post(
     }
   }
 );
+
+// Helper: Query Python YOLOv8 microservice for object detection bounding boxes
+async function getAIBoundingBoxes(cctvImagePath) {
+  try {
+    if (!cctvImagePath || !fs.existsSync(cctvImagePath)) {
+      return { engine: "simulator", boxes: [] };
+    }
+
+    const fileBuffer = fs.readFileSync(cctvImagePath);
+    const blob = new Blob([fileBuffer], { type: "image/jpeg" });
+    const formData = new globalThis.FormData();
+    formData.append("image", blob, path.basename(cctvImagePath));
+
+    const response = await fetch("http://localhost:8000/detect", {
+      method: "POST",
+      body: formData,
+      signal: AbortSignal.timeout(2000) // 2 second timeout
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error("HTTP error");
+  } catch (err) {
+    // Fallback simulator boxes if Python server is offline or fails
+    return {
+      engine: "simulator",
+      boxes: [
+        { label: "backpack", confidence: 0.942, box: [30, 80, 240, 310] },
+        { label: "laptop", confidence: 0.887, box: [220, 110, 420, 290] }
+      ]
+    };
+  }
+}
 
 // Helper: Local TF-IDF Jaccard semantic match simulator
 function calculateSemanticSim(title, desc) {
